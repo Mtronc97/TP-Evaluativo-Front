@@ -21,6 +21,7 @@ const productos = ref<Producto[]>([
   { codigo: 13, nombre: 'Palito Luccini', precio: 350, fechaPrecio: new Date('2026-05-18') },
   { codigo: 14, nombre: 'Rockstar 473ml', precio: 2100, fechaPrecio: new Date('2025-06-01') },
   { codigo: 15, nombre: 'Oblea Noel', precio: 200, fechaPrecio: new Date('2026-05-25') },
+
 ])
 const solicitudes = ref<Solicitud[]>([])
 
