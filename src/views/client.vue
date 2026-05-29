@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useProductoStore } from '@/stores/productoStore'
+import { usePedidoStore } from '@/stores/pedidoStore'
 import type { Producto } from '@/types/producto'
-import type { Solicitud } from '@/types/solicitud'
 import { isOutdated } from '@/utils/dateUtils'
 import ListofProducts from '@/components/ListofProducts.vue'
 import CartSummary from '@/components/CartSummary.vue'
 
-const { productos, solicitudes } = useProductoStore()
+const { productos } = useProductoStore()
+const { pedidos, createPedido } = usePedidoStore()
+
+// Pedidos del cliente actual (filtrados por clienteId)
+const myPedidos = computed(() => {
+  return pedidos.value.filter((p) => p.clienteId === 1)
+})
+
+// Toggle para mostrar/ocultar la sección de pedidos
+const showPedidos = ref<boolean>(false)
 
 // Carrito de productos seleccionados
 const cart = ref<Producto[]>([])
@@ -37,20 +46,15 @@ function addToCart(product: Producto): void {
   }
 }
 
-// Envía una solicitud de actualización al admin para un producto
-function requestPriceUpdate(productCode: number, productName: string): void {
-  const alreadyRequested: boolean = solicitudes.value.some((s) => s.codigoProducto === productCode)
-  if (!alreadyRequested) {
-    const request: Solicitud = { codigoProducto: productCode, nombreProducto: productName }
-    solicitudes.value.push(request)
-  }
-}
-
-// Solicita actualización para todos los productos desactualizados del carrito
+// Solicita actualización de precios: crea pedido en estado 'Verificando'
 function requestAllOutdated(): void {
-  cart.value
-    .filter((p) => isOutdated(p.fechaPrecio))
-    .forEach((p) => requestPriceUpdate(p.codigo, p.nombre))
+  createPedido({
+    clienteId: 1,
+    productos: [...cart.value],
+    total: total.value,
+    estado: 'Verificando',
+    fecha: new Date().toISOString()
+  })
   answeredWarning.value = true
 }
 
@@ -66,11 +70,19 @@ function cancelOrder(): void {
   answeredWarning.value = false
 }
 
-// Confirma el pedido y reinicia el estado
+// Confirma el pedido, lo guarda en localStorage y reinicia el estado
 function confirmOrder(): void {
+  createPedido({
+    clienteId: 1,
+    productos: [...cart.value],
+    total: total.value,
+    estado: 'Confirmado',
+    fecha: new Date().toISOString()
+  })
+
   cart.value = []
   answeredWarning.value = false
-  alert('¡Pedido exitoso!')
+  alert('¡Pedido guardado exitosamente!')
 }
 </script>
 
@@ -84,6 +96,51 @@ function confirmOrder(): void {
         <span class="text-sm text-primary-100">Cliente</span>
       </div>
     </header>
+
+    <!-- Botón toggle para Mis Pedidos -->
+    <div v-if="myPedidos.length > 0" class="max-w-7xl mx-auto px-4 md:px-6 pt-6">
+      <button
+        @click="showPedidos = !showPedidos"
+        class="w-full flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-200 px-4 md:px-6 py-4 hover:bg-gray-50 transition"
+      >
+        <span class="text-lg font-semibold text-gray-800">
+          Mis Pedidos ({{ myPedidos.length }})
+        </span>
+        <span class="text-sm text-gray-500">
+          {{ showPedidos ? '▲ Ocultar' : '▼ Ver pedidos' }}
+        </span>
+      </button>
+
+      <!-- Contenido colapsable -->
+      <div
+        v-if="showPedidos"
+        class="mt-3 bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6"
+      >
+        <div class="space-y-2">
+          <div
+            v-for="pedido in myPedidos"
+            :key="pedido.id"
+            class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border border-gray-100 rounded-lg p-3"
+          >
+            <div>
+              <p class="text-gray-700 text-sm font-medium">Pedido #{{ pedido.id }} — {{ pedido.productos.length }} productos</p>
+              <p class="text-gray-500 text-xs">Total: ${{ pedido.total }}</p>
+            </div>
+            <span
+              class="inline-block px-2 py-0.5 text-xs rounded-full font-medium"
+              :class="{
+                'bg-amber-100 text-amber-700': pedido.estado === 'Verificando',
+                'bg-blue-100 text-blue-700': pedido.estado === 'Confirmado',
+                'bg-green-100 text-green-700': pedido.estado === 'Completado',
+                'bg-gray-100 text-gray-600': pedido.estado === 'Borrador'
+              }"
+            >
+              {{ pedido.estado === 'Confirmado' ? '✅ Precios actualizados' : pedido.estado }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <main class="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8 flex flex-col lg:flex-row gap-6 lg:gap-8">
 
