@@ -10,8 +10,9 @@ const emit = defineEmits<{
 const productName = ref<string>('')
 const productPrice = ref<number>(0)
 
-// Envía los datos y limpia el formulario
+// Envía los datos y limpia el formulario (valida que no estén vacíos)
 function submitForm(): void {
+  if (!productName.value || productPrice.value <= 0) return
   emit('add-product', productName.value, productPrice.value)
   productName.value = ''
   productPrice.value = 0

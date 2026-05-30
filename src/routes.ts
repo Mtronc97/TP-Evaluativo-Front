@@ -10,12 +10,30 @@ const routes: Array<RouteRecordRaw> = [
     {
         path: '/client/:id',
         name: 'client',
-        component: () => import ('./views/client.vue')
+        component: () => import('./views/client.vue')
     },
     {
+        // Layout del admin con sidebar — rutas hijas se renderizan dentro
         path: '/admin/:id',
-        name: 'admin',
-        component: () => import ('./views/admin.vue')
+        component: () => import('./views/AdminLayout.vue'),
+        children: [
+            {
+                path: '',
+                name: 'admin-dashboard',
+                component: () => import('./views/AdminDashboard.vue')
+            },
+            {
+                path: 'users',
+                name: 'admin-users',
+                component: () => import('./views/UserList.vue')
+            }
+        ]
+    },
+    {
+        // Vista detalle de usuario (ruta independiente)
+        path: '/users/:id',
+        name: 'user-detail',
+        component: () => import('./views/UserDetail.vue')
     },
 ];
 

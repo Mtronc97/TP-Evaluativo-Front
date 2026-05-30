@@ -56,9 +56,43 @@ function handleRegister(): void {
     return
   }
 
+  // Nombre y apellido sin números
+  const nameRegex: RegExp = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/
+  if (!nameRegex.test(regFirstName.value) || !nameRegex.test(regLastName.value)) {
+    regError.value = 'Nombre y apellido no deben contener números'
+    return
+  }
+
+  // Email con formato válido
+  const emailRegex: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(regEmail.value)) {
+    regError.value = 'El email no tiene un formato válido'
+    return
+  }
+
+  // DNI solo números, entre 7 y 8 dígitos
+  const dniRegex: RegExp = /^\d{7,8}$/
+  if (!dniRegex.test(regDni.value)) {
+    regError.value = 'El DNI debe tener 7 u 8 dígitos numéricos'
+    return
+  }
+
+  // Contraseña mínimo 4 caracteres
+  if (regPassword.value.length < 4) {
+    regError.value = 'La contraseña debe tener al menos 4 caracteres'
+    return
+  }
+
   const emailExists: boolean = users.value.some((u) => u.email === regEmail.value)
   if (emailExists) {
     regError.value = 'Ya existe un usuario con ese email'
+    return
+  }
+
+  // DNI único
+  const dniExists: boolean = users.value.some((u) => u.dni === regDni.value)
+  if (dniExists) {
+    regError.value = 'Ya existe un usuario con ese DNI'
     return
   }
 
