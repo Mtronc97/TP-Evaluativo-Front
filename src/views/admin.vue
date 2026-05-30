@@ -1,15 +1,35 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useProductoStore } from '@/stores/productoStore'
 import { usePedidoStore } from '@/stores/pedidoStore'
+import { useUserStore } from '@/stores/userStore'
 import type { Producto } from '@/types/producto'
 import type { EstadoPedido } from '@/types/pedido'
+import type { User } from '@/types/user'
 import { isOutdated } from '@/utils/dateUtils'
 import ListofProducts from '@/components/ListofProducts.vue'
 import AddProductForm from '@/components/AddProductForm.vue'
 
+const router = useRouter()
+const route = useRoute()
 const { productos } = useProductoStore()
 const { pedidos, updateEstado } = usePedidoStore()
+const { users, loggedUser } = useUserStore()
+
+const showUserDropdown = ref<boolean>(false)
+
+function switchUser(user: User): void {
+  loggedUser.value = user
+  showUserDropdown.value = false
+  router.push(user.role === 'admin' ? `/admin/${user.id}` : `/client/${user.id}`)
+}
+
+onMounted(() => {
+  const id = Number(route.params.id)
+  const user = users.value.find((u) => u.id === id)
+  if (user) loggedUser.value = user
+})
 
 // Toggle para mostrar/ocultar la sección de pedidos
 const showPedidos = ref<boolean>(false)
@@ -93,16 +113,54 @@ function confirmPedido(pedidoId: number): void {
 function completePedido(pedidoId: number): void {
   updateEstado(pedidoId, 'Completado')
 }
+
+// Devuelve el nombre completo del cliente por su ID
+function getClientName(clienteId: number): string {
+  const user = users.value.find((u) => u.id === clienteId)
+  return user ? `${user.firstName} ${user.lastName}` : `Cliente #${clienteId}`
+}
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-50">
 
     <!-- Header -->
-    <header class="bg-primary-500 shadow-sm">
+    <header class="bg-primary-500 shadow-sm sticky top-0 z-10">
       <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
         <h1 class="text-xl font-bold text-white">TuDistribuidora</h1>
-        <span class="text-sm text-primary-100">Admin</span>
+
+        <!-- User switcher -->
+        <div class="relative">
+          <div v-if="showUserDropdown" class="fixed inset-0 z-0" @click="showUserDropdown = false"></div>
+          <button
+            @click="showUserDropdown = !showUserDropdown"
+            class="flex items-center gap-2 text-sm text-primary-100 hover:text-white transition z-10 relative"
+          >
+            <span>{{ loggedUser ? `${loggedUser.firstName} ${loggedUser.lastName}` : 'Admin' }}</span>
+            <span class="text-xs opacity-70">▼</span>
+          </button>
+          <div
+            v-if="showUserDropdown"
+            class="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 z-20 min-w-52 overflow-hidden"
+          >
+            <p class="text-xs text-gray-400 px-4 py-2 border-b border-gray-100">Cambiar usuario</p>
+            <button
+              v-for="user in users"
+              :key="user.id"
+              @click="switchUser(user)"
+              class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition text-left"
+              :class="{ 'bg-primary-50': loggedUser?.id === user.id }"
+            >
+              <span class="text-gray-800 text-sm font-medium">{{ user.firstName }} {{ user.lastName }}</span>
+              <span
+                class="text-xs px-2 py-0.5 rounded-full font-medium"
+                :class="user.role === 'admin' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'"
+              >
+                {{ user.role }}
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -138,6 +196,7 @@ function completePedido(pedidoId: number): void {
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
               <div>
                 <p class="text-gray-800 font-semibold">Pedido #{{ pedido.id }}</p>
+                <p class="text-gray-700 text-sm font-medium">{{ getClientName(pedido.clienteId) }}</p>
                 <p class="text-gray-500 text-sm">{{ pedido.productos.length }} productos — Total: ${{ pedido.total }}</p>
               </div>
               <span

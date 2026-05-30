@@ -40,9 +40,9 @@ function handleLogin(): void {
   loggedUser.value = user
 
   if (user.role === 'admin') {
-    router.push('/admin')
+    router.push(`/admin/${user.id}`)
   } else {
-    router.push('/client')
+    router.push(`/client/${user.id}`)
   }
 }
 
